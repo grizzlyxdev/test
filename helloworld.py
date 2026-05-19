@@ -3,9 +3,26 @@ import argparse
 import os
 import sys
 import time
+import logging
+from datetime import datetime
 
-def greet(name: str, times: int = 1, delay: float = 0.0, shout: bool = False, message: str = "Hello") -> None:
-    """Print a greeting `times` times with optional delay and custom message.
+# Optional colored output (requires termcolor, fallback to plain text)
+try:
+    from termcolor import colored
+except ImportError:
+    def colored(text, color=None, attrs=None):
+        return text
+
+# Configure basic logging to a file in the user's home directory
+log_file = os.path.expanduser("~/.helloworld.log")
+logging.basicConfig(
+    filename=log_file,
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
+def greet(name: str, times: int = 1, delay: float = 0.0, shout: bool = False, message: str = "Hello", color: str = None) -> None:
+    """Print a greeting `times` times with optional delay, shout, and color.
 
     Args:
         name: Name to greet.
@@ -13,36 +30,49 @@ def greet(name: str, times: int = 1, delay: float = 0.0, shout: bool = False, me
         delay: Seconds to wait between each greeting.
         shout: Convert greeting to uppercase if True.
         message: Custom greeting word (default "Hello").
+        color: Optional color name for the output (e.g., red, green).
     """
-    for _ in range(times):
+    for i in range(times):
         greeting = f"{message}, {name}!"
         if shout:
             greeting = greeting.upper()
+        if color:
+            greeting = colored(greeting, color)
         print(greeting)
+        logging.info("Printed greeting %d: %s", i + 1, greeting)
         if delay > 0:
             time.sleep(delay)
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Print a greeting with optional repetitions, delay, and custom message.")
+    parser = argparse.ArgumentParser(description="Print a greeting with optional repetitions, delay, custom message, and color.")
     parser.add_argument("-n", "--name", default=os.getenv("GREETING_NAME", "World"),
                         help="Name to greet (default: env GREETING_NAME or 'World')")
-    parser.add_argument("-r", "--repeat", type=int, default=1,
+    parser.add_argument("-r", "--repeat", type=int, default=int(os.getenv("GREETING_REPEAT", "1")),
                         help="How many times to repeat the greeting (default: 1)")
-    parser.add_argument("-d", "--delay", type=float, default=0.0,
+    parser.add_argument("-d", "--delay", type=float, default=float(os.getenv("GREETING_DELAY", "0.0")),
                         help="Delay in seconds between greetings (default: 0)")
-    parser.add_argument("-m", "--message", default="Hello",
+    parser.add_argument("-m", "--message", default=os.getenv("GREETING_MESSAGE", "Hello"),
                         help="Custom greeting word (default: 'Hello')")
     parser.add_argument("--shout", action="store_true",
                         help="Convert greeting to uppercase")
+    parser.add_argument("-c", "--color", choices=["red", "green", "yellow", "blue", "magenta", "cyan", "white"],
+                        help="Print greeting in the specified color (requires termcolor)")
     parser.add_argument("-v", "--version", action="store_true",
                         help="Show script version and exit")
     args = parser.parse_args()
 
     if args.version:
-        print("helloworld.py version 2.0")
+        print("helloworld.py version 2.1")
         sys.exit(0)
 
-    greet(name=args.name, times=args.repeat, delay=args.delay, shout=args.shout, message=args.message)
+    greet(
+        name=args.name,
+        times=args.repeat,
+        delay=args.delay,
+        shout=args.shout,
+        message=args.message,
+        color=args.color,
+    )
 
 if __name__ == "__main__":
     try:
